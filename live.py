@@ -1,10 +1,11 @@
 import numpy as np, cv2
 import os
+import argparse as ap
 # ################################
 from src.chronometer import Chronometer
-from src.detector.face_detector import FaceDetector
-from src.detector.face_mesh_detector import FaceMeshDetector
-from src.detector.iris_detector import IrisDetector
+from src.detection.face import FaceDetector
+from src.detection.face_mesh import FaceMeshDetector
+from src.detection.iris import IrisDetector
 # ################################
 
 
@@ -18,11 +19,23 @@ iris_detector = IrisDetector(os.path.join(
     'data', 'models', 'iris_landmark.tflite'))
 # ################################
 
+# get stream id from command line
+parser = ap.ArgumentParser()
+parser.add_argument('-i', '--input_stream', default='0')
+args = parser.parse_args()
+# ################################
 
 # open webcam
 print('Open Camera Stream')
+try:
+    # check if stream is an integer (camera id)
+    stream_path = int(args.input_stream)
+except:
+    # was not an integer, use it as it
+    stream_path = args.input_path
+
 stream = cv2.VideoCapture()
-assert stream.open(0)
+assert stream.open(stream_path)
 
 chrono = Chronometer()
 

@@ -18,7 +18,7 @@ class IrisDetector:
 
         IrisLandmarkCpu
     """
-    MODEL_INPUT  = 64
+    CROP_SIZE  = 64
     CROP_PADDING = 2.3
 
     INPUT_IDX       = 0    # name:'input_1', index:0, shape:(1, 64, 64, 3)
@@ -98,22 +98,22 @@ class IrisDetector:
         cy    = (ly + ry) / 2
         # compute scale
         width = np.linalg.norm((rx-lx+1, ry-ly+1))
-        scale = self.MODEL_INPUT / (width * self.CROP_PADDING)
+        scale = self.CROP_SIZE / (width * self.CROP_PADDING)
         # build rotation & scaling transform (preserves rotation center)
         R = cv2.getRotationMatrix2D((cx, cy), angle, scale)
         R = np.vstack((R, [0, 0, 1])) # 2x3 -> 3x3 matrix        
         # build translation transform
         if not right:
             # for left eye, no hflip, only need a simple translation
-            ty = (self.MODEL_INPUT / 2) - cy
-            tx = (self.MODEL_INPUT / 2) - cx
+            ty = (self.CROP_SIZE / 2) - cy
+            tx = (self.CROP_SIZE / 2) - cx
             T  = np.float32([[1, 0, tx], [0, 1, ty], [0, 0, 1]])
         else:
             # for right eye, need to chain transforms
             # 1) translate so the center becomes 0
             T0 = np.float32([[1, 0, -cx], [0, 1, -cy], [0, 0, 1]])
             # 2) hflip & translate back to crop center
-            c  = self.MODEL_INPUT / 2
+            c  = self.CROP_SIZE / 2
             T1 = np.float32([[-1, 0, c], [0, 1, c], [0, 0, 1]])
             # 3) combine T1 & T2
             T = np.dot(T1, T0)
@@ -122,7 +122,7 @@ class IrisDetector:
         M = np.dot(T, R)
         # apply transform
         crop = cv2.warpPerspective(
-            bgr_frame, M, (self.MODEL_INPUT, self.MODEL_INPUT),
+            bgr_frame, M, (self.CROP_SIZE, self.CROP_SIZE),
             cv2.INTER_LINEAR)
 
         return crop, M
@@ -139,7 +139,7 @@ class IrisDetector:
         iris_kp     = iris_kp[:,:2]
         iris_kp     = cv2.perspectiveTransform(iris_kp[None,:,:], Mi)[0]
 
-        roi = utils.original_roi(self.MODEL_INPUT, Mi)
+        roi = utils.original_roi(self.CROP_SIZE, Mi)
 
         return roi, eye_kp, iris_kp
     # ################################

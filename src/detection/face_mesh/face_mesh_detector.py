@@ -11,7 +11,7 @@ from .. import utils
 
 class FaceMeshDetector:
     NB_KP        = 468
-    MODEL_INPUT  = 192
+    CROP_SIZE  = 192
     CROP_PADDING = 1.5
 
     INPUT_IDX       = 0    # name:'input_1', index:0, shape:(1, 192, 192, 3)
@@ -72,19 +72,19 @@ class FaceMeshDetector:
         re_x, re_y = face.keypoints[FaceLandmark.eye_right]
         angle      = 180 * np.arctan2(re_y-le_y, re_x-le_x) / np.pi
         # compute scale
-        scale      = self.MODEL_INPUT / (max(face.width, face.height) * self.CROP_PADDING)
+        scale      = self.CROP_SIZE / (max(face.width, face.height) * self.CROP_PADDING)
         # build rotation & scaling transform (preserves rotation center)
         R = cv2.getRotationMatrix2D((face.cx, face.cy), angle, scale)
         R = np.vstack((R, [0, 0, 1])) # 2x3 -> 3x3 matrix
         # build translation transform
-        tx = (self.MODEL_INPUT / 2) - face.cx
-        ty = (self.MODEL_INPUT / 2) - face.cy
+        tx = (self.CROP_SIZE / 2) - face.cx
+        ty = (self.CROP_SIZE / 2) - face.cy
         T  = np.float32([[1, 0, tx], [0, 1, ty], [0, 0, 1]])
         # combine transforms
         M = np.dot(T, R)
         # apply transform
         crop = cv2.warpPerspective(
-            bgr_frame, M, (self.MODEL_INPUT, self.MODEL_INPUT),
+            bgr_frame, M, (self.CROP_SIZE, self.CROP_SIZE),
             cv2.INTER_LINEAR)
 
         return crop, M
@@ -103,7 +103,7 @@ class FaceMeshDetector:
         keypoints = cv2.perspectiveTransform(keypoints[None,:,:], Mi)[0]
 
         # build the ROI 
-        roi = utils.original_roi(self.MODEL_INPUT, Mi)
+        roi = utils.original_roi(self.CROP_SIZE, Mi)
 
         return roi, flag, keypoints
     # ################################

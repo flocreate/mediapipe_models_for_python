@@ -25,6 +25,8 @@ class FaceDetector:
     INPUT_IDX    = 0
     OUTPUT_C_IDX = 174
     OUTPUT_R_IDX = 175
+    
+    CROP_SIZE = 128
 
     ANCHOR_PARAMS = dict(
         num_layers          = 4,
@@ -75,7 +77,7 @@ class FaceDetector:
 
     def __call__(self, bgr_frame):
         # prepare input
-        input = self._prepare(bgr_frame)
+        input, scale = self._prepare(bgr_frame)
         # process
         with self.lock:
             # set input tensors
@@ -86,8 +88,7 @@ class FaceDetector:
             classificators  = self.model.get_tensor(self.OUTPUT_C_IDX)[0]
             regressors      = self.model.get_tensor(self.OUTPUT_R_IDX)[0]
         # post process
-        h, w = bgr_frame.shape[:2]
-        faces = self._pprocess(classificators, regressors, h, w)
+        faces = self._pprocess(classificators, regressors, scale)
 
         return faces
     # ################################
@@ -97,21 +98,23 @@ class FaceDetector:
             cast to float32 on [-1;+1]
         """
         h, w  = bgr_frame.shape[:2]
-        scale = 128 / max(h, w)
+        scale = self.CROP_SIZE / max(h, w)
         input = cv2.resize(bgr_frame, (0, 0), 
             fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
         h, w  = input.shape[:2]
         # input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
-        input = cv2.copyMakeBorder(input, 0, 128-h, 0, 128-w, cv2.BORDER_CONSTANT, 0)
+        input = cv2.copyMakeBorder(input, 
+            0, self.CROP_SIZE-h, 0, self.CROP_SIZE-w, 
+            cv2.BORDER_CONSTANT, 0)
         # uint8 [0;255] to float32 [-1;+1]
         input = input.astype(np.float32) / 128.0 - 1.0
         # set as batch of 1
         input = np.expand_dims(input, 0)
 
-        return input
+        return input, scale
     # ################################
 
-    def _pprocess(self, classificators, regressors, h, w):
+    def _pprocess(self, classificators, regressors, scale):
         # decode predictions
         _, scores, boxes, keypoints = tensors_to_detections_calculator(
             classificators, regressors, 
@@ -124,8 +127,13 @@ class FaceDetector:
             scores      = scores[keep_idx]
             boxes       = boxes[keep_idx]
             keypoints   = keypoints[keep_idx]
+
+            # denormalization
+            boxes       = boxes * self.CROP_SIZE / scale
+            keypoints   = keypoints * self.CROP_SIZE / scale
+
             # format to objects
-            faces = list(starmap(Face, zip(scores, boxes * (w, h, w, h), keypoints * (w, h))))
+            faces = list(starmap(Face, zip(scores, boxes, keypoints)))
         else:
             faces = []
 
