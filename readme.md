@@ -1,5 +1,7 @@
 # Mediapipe models for python
 
+![result preview](https://i.ibb.co/N1d6FRD/test-result.png)
+
 This repository implements some of the [Mediapipe](https://mediapipe.dev/) models.
 
 Even though some of those incredible models are already [available in python](https://github.com/google/mediapipe) and other languages, my goal here is:
