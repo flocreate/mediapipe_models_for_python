@@ -4,29 +4,36 @@ import os
 from threading import Lock
 from itertools import starmap
 # ################################
-from .face import Face
 from ..ssd_anchors_calculator import ssd_anchors_calculator
 from ..tensors_to_detections_calculator import tensors_to_detections_calculator
 from ..faster_nms import faster_nms
+from .palm import Palm
 # ################################
 
 
-class FaceDetector:
+class PalmDetector:
     """
-        MediaPipe Face Detector
+        MediaPipe Plam Detector
 
-        Inputs: 
-        > 0: name:'input', shape:(1, 128, 128, 3), dtype:np.float32
+        Implementation based on 
+        https://github.com/google/mediapipe/blob/master/mediapipe/modules/palm_detection/palm_detection_cpu.pbtxt
 
-        Outputs:
-        > 174: name:'classificators', shape:(1, 896, 1), dtype:np.float32
-        > 175: name:'regressors', shape:(1, 896, 16), dtype:np.int32
+        preparation: 
+            128x128 float on [-1.0;1.0]
+            keep aspect ration with zero padding
+        
+        Inputs:
+            input           @0      (1, 128, 128, 3), float32 rgb on [-1;+1]
+        Outputs: 
+            classificators  @255    (1, 896, 1), float32
+            regressors      @256    (1, 896, 18), float32
     """
-    INPUT_IDX    = 0
-    OUTPUT_C_IDX = 174
-    OUTPUT_R_IDX = 175
-    
-    CROP_SIZE = 128
+
+    CROP_SIZE       = 128
+
+    INPUT_IDX       = 0
+    OUTPUT_C_IDX    = 255
+    OUTPUT_R_IDX    = 256
 
     ANCHOR_PARAMS = dict(
         num_layers          = 4,
@@ -44,10 +51,10 @@ class FaceDetector:
     DECODE_PARAMS = dict(
         num_classes             = 1,
         num_boxes               = 896,
-        num_coords              = 16,
+        num_coords              = 18,
         box_coord_offset        = 0,
         keypoint_coord_offset   = 4,
-        num_keypoints           = 6,
+        num_keypoints           = 7,
         num_values_per_keypoint = 2,
         sigmoid_score           = True,
         score_clipping_thresh   = 100.0,
@@ -71,7 +78,6 @@ class FaceDetector:
             ## tflite model
             self.model = tf.lite.Interpreter(model_path=model_path)
             self.model.allocate_tensors()
-
         ## ssd anchors to decode predictions
         self.anchors = ssd_anchors_calculator(**self.ANCHOR_PARAMS)
     # ################################
@@ -89,14 +95,15 @@ class FaceDetector:
             classificators  = self.model.get_tensor(self.OUTPUT_C_IDX)[0]
             regressors      = self.model.get_tensor(self.OUTPUT_R_IDX)[0]
         # post process
-        faces = self._pprocess(classificators, regressors, scale)
+        palms = self._pprocess(classificators, regressors, scale)
 
-        return faces
+        return palms
     # ################################
 
     def _prepare(self, bgr_frame):
         """ proportional scalin to 128x128 pxl with black padding 
             cast to float32 on [-1;+1]
+            bgr -> rgb
         """
         h, w  = bgr_frame.shape[:2]
         scale = self.CROP_SIZE / max(h, w)
@@ -136,9 +143,9 @@ class FaceDetector:
             keypoints   = keypoints * self.CROP_SIZE / scale
 
             # format to objects
-            faces = list(starmap(Face, zip(scores, boxes, keypoints)))
+            palms = list(starmap(Palm, zip(scores, boxes, keypoints)))
         else:
-            faces = []
+            palms = []
 
-        return faces
+        return palms
     # ################################

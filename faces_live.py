@@ -1,6 +1,7 @@
 import numpy as np, cv2
 import os
 import argparse as ap
+from itertools import chain
 # ################################
 from src.chronometer import Chronometer
 from src.detection.face import FaceDetector
@@ -77,6 +78,15 @@ while True:
 
         frame = np.hstack((f0, f1, f2))
 
+        raw = [iris.bgr_crop for iris in chain(*[
+            i for i in irises if i is not None])
+            if iris is not None]
+        if len(raw):
+            raw   = np.hstack(raw)
+            w     = max(frame.shape[1], raw.shape[1])
+            frame = cv2.copyMakeBorder(frame, 0, 0, 0, w-frame.shape[1], cv2.BORDER_CONSTANT, 0)
+            raw   = cv2.copyMakeBorder(raw, 0, 0, 0, w-raw.shape[1], cv2.BORDER_CONSTANT, 0)
+            frame = np.vstack((frame, raw))
 
     cv2.imshow('shadow', frame)
     if cv2.waitKey(1) != -1: break

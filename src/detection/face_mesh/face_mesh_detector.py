@@ -54,10 +54,10 @@ class FaceMeshDetector:
         """ extract face ROI aligning eyes """
         # align & crop face
         bgr_crop, M = self._crop(bgr_frame, face)
-
         # input = cv2.cvtColor(bgr_crop, cv2.COLOR_BGR2RGB)
         input = bgr_crop
-        
+        # bgr -> rgb
+        input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)
         # uint8 [0;255] to float32 [0;1]
         input = input.astype(np.float32) / 255.0
         # set as batch of 1
