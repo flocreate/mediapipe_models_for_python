@@ -20,4 +20,4 @@ At the moment, this code supports 3 models:
 - [Face Mesh](https://drive.google.com/file/d/1QvwWNfFoweGVjsXF3DXzcrCnz-mx-Lha/view): localize 468 landmarks on a detected face.
     - *Z* coordinate of landmark is not managed yet.
 - [Iris](https://drive.google.com/file/d/1bsWbokp9AklH2ANjCfmjqEzzxO1CNbMu/view): localize 5+71 lanmarks on a detected eye.
-
+- [Palm Detection](https://drive.google.com/file/d/1yiPfkhb4hSbXJZaSq9vDmhz24XVZmxpL/view)
