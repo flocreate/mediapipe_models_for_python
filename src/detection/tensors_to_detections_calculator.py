@@ -1,7 +1,12 @@
 import numpy as np
-from . import utils
 # ################################
 
+
+def sigmoid(value, clip=None):
+    if clip is not None:
+        value = np.clip(value, -clip, clip)
+    return 1 / (1 + np.exp(-value))
+# ################################
 
 def tensors_to_detections_calculator(
     classificators, regressors, anchors,
@@ -39,7 +44,7 @@ def tensors_to_detections_calculator(
     scores = np.amax(classificators, axis=1).flatten()
 
     if sigmoid_score:
-        scores = utils.sigmoid(scores, score_clipping_thresh)
+        scores = sigmoid(scores, score_clipping_thresh)
 
     # select only pertinent items
     keep        = (scores >= min_score_thresh)

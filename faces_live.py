@@ -4,7 +4,7 @@ import argparse as ap
 from itertools import chain
 # ################################
 from src.chronometer import Chronometer
-from src.detection.face import FaceDetector
+from src.detection.face import FrontFaceDetector
 from src.detection.face_mesh import FaceMeshDetector
 from src.detection.iris import IrisDetector
 # ################################
@@ -12,7 +12,7 @@ from src.detection.iris import IrisDetector
 
 # load face detector
 print('Prepare models')
-face_detector = FaceDetector(os.path.join(
+face_detector = FrontFaceDetector(os.path.join(
     'data', 'models', 'face_detection_front.tflite'))
 face_mesh_detector = FaceMeshDetector(os.path.join(
     'data', 'models', 'face_landmark.tflite'))

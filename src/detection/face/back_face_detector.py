@@ -11,32 +11,25 @@ from ..faster_nms import faster_nms
 # ################################
 
 
-class FaceDetector:
+class BackFaceDetector:
     """
         MediaPipe Face Detector
-
-        Inputs: 
-        > 0: name:'input', shape:(1, 128, 128, 3), dtype:np.float32
-
-        Outputs:
-        > 174: name:'classificators', shape:(1, 896, 1), dtype:np.float32
-        > 175: name:'regressors', shape:(1, 896, 16), dtype:np.int32
     """
     INPUT_IDX    = 0
-    OUTPUT_C_IDX = 174
-    OUTPUT_R_IDX = 175
+    OUTPUT_C_IDX = 283
+    OUTPUT_R_IDX = 284
     
-    CROP_SIZE = 128
+    CROP_SIZE = 256
 
     ANCHOR_PARAMS = dict(
         num_layers          = 4,
-        min_scale           = 0.1484375,
+        min_scale           = 0.15625,
         max_scale           = 0.75,
-        input_size_height   = 128,
-        input_size_width    = 128,
+        input_size_height   = 256,
+        input_size_width    = 256,
         anchor_offset_x     = 0.5,
         anchor_offset_y     = 0.5,
-        strides             = [8, 16, 16, 16],
+        strides             = [16, 32, 32, 32],
         aspect_ratios       = [1.0],
         fixed_anchor_size   = True
     )
@@ -52,16 +45,13 @@ class FaceDetector:
         sigmoid_score           = True,
         score_clipping_thresh   = 100.0,
         reverse_output_order    = True,
-        x_scale                 = 128.0,
-        y_scale                 = 128.0,
-        h_scale                 = 128.0,
-        w_scale                 = 128.0,
-        min_score_thresh        = 0.5
+        x_scale                 = 256.0,
+        y_scale                 = 256.0,
+        h_scale                 = 256.0,
+        w_scale                 = 256.0
     )
 
-    NMS_IOU_TH = 0.5
-
-    def __init__(self, model_path):
+    def __init__(self, model_path: str, score_th: float=0.65, nms_iou_th: float=0.3):
         assert os.path.exists(model_path)
         ## tflite model path
         self.model_path = model_path
@@ -74,6 +64,10 @@ class FaceDetector:
 
         ## ssd anchors to decode predictions
         self.anchors = ssd_anchors_calculator(**self.ANCHOR_PARAMS)
+        ## min score th
+        self.score_th = score_th
+        # min nms iou th
+        self.nms_iou_th = nms_iou_th
     # ################################
 
     def __call__(self, bgr_frame):
@@ -95,7 +89,7 @@ class FaceDetector:
     # ################################
 
     def _prepare(self, bgr_frame):
-        """ proportional scalin to 128x128 pxl with black padding 
+        """ proportional scalin to 256x256 pxl with black padding 
             cast to float32 on [-1;+1]
         """
         h, w  = bgr_frame.shape[:2]
@@ -121,12 +115,13 @@ class FaceDetector:
         # decode predictions
         _, scores, boxes, keypoints = tensors_to_detections_calculator(
             classificators, regressors, 
-            self.anchors, **self.DECODE_PARAMS)
+            self.anchors, **self.DECODE_PARAMS, 
+            min_score_thresh = self.score_th)
         
         # NMS
         if len(scores):
             idx         = np.argsort(scores)
-            keep_idx    = faster_nms(boxes, idx, self.NMS_IOU_TH)
+            keep_idx    = faster_nms(boxes, idx, self.nms_iou_th)
             scores      = scores[keep_idx]
             boxes       = boxes[keep_idx]
             keypoints   = keypoints[keep_idx]

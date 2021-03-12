@@ -5,7 +5,7 @@ import argparse as ap
 import requests
 # ################################
 from src.chronometer import Chronometer
-from src.detection.face import FaceDetector
+from src.detection.face import FrontFaceDetector, BackFaceDetector
 from src.detection.face_mesh import FaceMeshDetector
 from src.detection.iris import IrisDetector
 # ################################
@@ -15,6 +15,7 @@ parser.add_argument('input_img_path', help='image file to process')
 parser.add_argument('output_img_path', help='image file to generate')
 parser.add_argument('-m', '--model_folder', help='tflite model file',
     default=os.path.join('data', 'models'))
+parser.add_argument('-b', '--back_model', action='store_true')
 args = parser.parse_args()
 # ################################
 
@@ -23,9 +24,15 @@ chrono = Chronometer().start()
 
 with chrono['prepare models']:
     # load face detector
-    face_detector = FaceDetector(os.path.join(args.model_folder, 'face_detection_front.tflite'))
-    face_mesh_detector = FaceMeshDetector(os.path.join(args.model_folder, 'face_landmark.tflite'))
-    iris_detector = IrisDetector(os.path.join(args.model_folder, 'iris_landmark.tflite'))
+    if args.back_model:
+        face_detector = BackFaceDetector(os.path.join(
+            args.model_folder, 'face_detection_back.tflite'))
+    else:
+        face_detector = FrontFaceDetector(os.path.join(
+            args.model_folder, 'face_detection_front.tflite'))
+
+    face_mesh_detector  = FaceMeshDetector(os.path.join(args.model_folder, 'face_landmark.tflite'))
+    iris_detector       = IrisDetector(os.path.join(args.model_folder, 'iris_landmark.tflite'))
 
 with chrono['load image']:
     if not args.input_img_path.startswith('http'):
